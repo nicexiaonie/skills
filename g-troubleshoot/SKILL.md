@@ -1,5 +1,5 @@
 ---
-name: troubleshoot
+name: g-troubleshoot
 description: 按固定流程排查线上/测试/本地问题：先定义问题，再沿链路收集证据、定位根因，最后输出确认过的结论；也可在对话中已有分析后调用，核对补验证后按标准输出。只排查不修改。
 disable-model-invocation: true
 argument-hint: [问题描述或补充说明，对话中已有排查时可省略]

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# 交互式安装本仓库的 skill。
+# 交互式安装 / 卸载本仓库的 skill。
 # 全局安装：软链接到 ~/.claude/skills/，仓库内修改即时生效。
-# 项目安装：复制到 <项目>/.claude/skills/，已存在则跳过，需手动删除旧副本后重新运行以同步。
+# 项目安装：复制到 <项目>/.claude/skills/，已存在则跳过，需先卸载后重新安装以同步。
+# 卸载：全局只删除指向本仓库的软链接；项目删除同名目录。
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,7 +17,21 @@ if [ ${#skills[@]} -eq 0 ]; then
   exit 1
 fi
 
-echo "可安装的 skill："
+echo "操作："
+echo "  1) 安装"
+echo "  2) 卸载"
+read -r -p "选择 1 或 2：" action
+
+case "$action" in
+  1) action="install" ;;
+  2) action="uninstall" ;;
+  *)
+    echo "无效选择：$action"
+    exit 1
+    ;;
+esac
+
+echo "可选的 skill："
 for i in "${!skills[@]}"; do
   echo "  $((i + 1))) ${skills[$i]}"
 done
@@ -41,7 +56,7 @@ if [ ${#selected[@]} -eq 0 ]; then
   exit 1
 fi
 
-echo "安装位置："
+echo "位置："
 echo "  1) 全局（~/.claude/skills，软链接）"
 echo "  2) 项目（<项目>/.claude/skills，复制）"
 read -r -p "选择 1 或 2：" scope
@@ -67,6 +82,28 @@ case "$scope" in
     ;;
 esac
 
+if [ "$action" = "uninstall" ]; then
+  for name in "${selected[@]}"; do
+    src="$REPO_DIR/$name"
+    dest="$target/$name"
+
+    if [ ! -e "$dest" ] && [ ! -L "$dest" ]; then
+      echo "未安装，跳过：$name"
+    elif [ "$mode" = "link" ]; then
+      if [ -L "$dest" ] && [ "$(readlink "$dest")" = "$src" ]; then
+        rm "$dest"
+        echo "已卸载：$dest"
+      else
+        echo "目标不是本仓库的软链接，跳过：$dest"
+      fi
+    else
+      rm -rf "$dest"
+      echo "已删除：$dest"
+    fi
+  done
+  exit 0
+fi
+
 mkdir -p "$target"
 
 for name in "${selected[@]}"; do
@@ -84,7 +121,7 @@ for name in "${selected[@]}"; do
     fi
   else
     if [ -e "$dest" ] || [ -L "$dest" ]; then
-      echo "目标已存在，跳过：${dest}（如需更新，请先手动删除该目录后重新运行）"
+      echo "目标已存在，跳过：${dest}（如需更新，请先卸载后重新安装）"
     else
       cp -R "$src" "$dest"
       echo "已复制：$dest"
